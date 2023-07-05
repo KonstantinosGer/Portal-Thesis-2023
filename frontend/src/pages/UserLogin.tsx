@@ -1,0 +1,168 @@
+import {useEffect, useState} from 'react';
+import {LockOutlined, UserOutlined} from '@ant-design/icons';
+import {LoginFormPage, ProFormText,} from '@ant-design/pro-components';
+import {Button, Divider, notification, Tabs, Typography} from 'antd';
+import {ReactComponent as Logo} from '../assets/dm_logo_long.svg';
+import {useLocation, useNavigate} from "react-router-dom";
+import {UserAuth} from "../context/AuthContext";
+
+
+type Props = {};
+
+type LoginType = 'phone' | 'account';
+
+type LoginUserCredentials = {
+    email: string,
+    password: string
+}
+
+
+export function UserLogin(props: Props) {
+
+    const [loginType, setLoginType] = useState<LoginType>('account');
+    const [authenticating, setAuthenticating] = useState<boolean>(false);
+    const [error, setError] = useState<string | undefined>(undefined);
+    const navigate = useNavigate();
+    // const { state } = useLocation();
+    const location = useLocation();
+
+    const {signInWithGoogle, signInEmailPassword, user} = UserAuth();
+
+    const handleEmailPasswordSignIn = async ({email, password}: LoginUserCredentials) => {
+        if (authenticating) return
+
+        setAuthenticating(true)
+        setError(undefined)
+        // setError('')
+        try {
+            await signInEmailPassword(email, password)
+            const origin = location.state?.from?.pathname || '/';
+            navigate(origin);
+        } catch (e: any) {
+            // setError(e.message)
+            // console.log(e.message)
+            //TODO handle error
+            if (e.code == 'auth/wrong-password') {
+                setError('The password is invalid or the user does not have a password.')
+            } else if (e.code == 'auth/too-many-requests') {
+                setError('Access to this account has been temporarily disabled due to many failed login attempts. You can immediately restore it by resetting your password or you can try again later.')
+            } else if ('auth/invalid-email') {
+                setError('The email address is badly formatted.')
+            } else if ('auth/user-not-found') {
+                setError('No user found with this email.')
+            } else {
+                console.log({e})
+                setAuthenticating(false)
+                notification.error({message: 'Could not login.'})
+            }
+        }
+        setAuthenticating(false)
+    };
+
+    const handleGoogleSignIn = async () => {
+        if (authenticating) return
+
+        setAuthenticating(true)
+        try {
+            await signInWithGoogle();
+            const origin = location.state?.from?.pathname || '/';
+            navigate(origin);
+
+        } catch (e) {
+            //TODO handle error
+            console.log(e);
+            notification.error({message: 'Could not login.'})
+            setAuthenticating(false)
+        }
+        setAuthenticating(false)
+    };
+
+    useEffect(() => {
+        if (user != null) {
+            // console.log(location.state)
+            const origin = location.state?.from?.pathname || '/';
+            navigate(origin);
+        }
+    }, [user]);
+
+    return (
+        <div style={{backgroundColor: 'white', height: 'calc(100vh - 48px)', margin: 0}}>
+            <LoginFormPage
+                backgroundImageUrl="https://gw.alipayobjects.com/zos/rmsportal/FfdJeJRQWjEeGTpqgBKj.png"
+                onFinish={async (formData: LoginUserCredentials) => handleEmailPasswordSignIn(formData)}
+                logo={<Logo fill='#006d75'
+                            style={{width: 400, height: 200, marginTop: -70, marginLeft: -170}}/>}
+                // title="Digital Minds"
+                subTitle={<></>}
+
+                submitter={{submitButtonProps: {style: {width: '100%', backgroundColor: '#006d75'}}}}
+
+                actions={
+                    // <div style={{marginTop: -42}}> TODO fix empty margin when logging out !!
+                    <div>
+                        <br/>
+                        <Divider plain>
+                            <span style={{color: '#CCC', fontWeight: 'normal', fontSize: 14}}>Other login methods</span>
+                        </Divider>
+
+                        <Button
+                            type={"link"}
+                            style={{pointerEvents: authenticating ? 'none' : 'auto'}}
+                            disabled={authenticating}
+                            onClick={handleGoogleSignIn}
+                        >Sign in as Digital Minds manager</Button>
+                    </div>
+                }
+            >
+                <Tabs
+                    centered
+                    activeKey={loginType}
+                    onChange={(activeKey) => setLoginType(activeKey as LoginType)}
+                >
+                    <Tabs.TabPane key={'account'} tab={'Email/Password login'}/>
+                    {/*<Tabs.TabPane key={'phone'} tab={'Phone login'} disabled />*/}
+                </Tabs>
+                {loginType === 'account' && (
+                    <>
+                        <ProFormText
+                            name="email"
+                            fieldProps={{
+                                size: 'large',
+                                prefix: <UserOutlined className={'prefixIcon'}/>,
+                            }}
+                            rules={[
+                                {
+                                    required: true,
+                                },
+                            ]}
+                        />
+                        <ProFormText.Password
+                            name="password"
+                            fieldProps={{
+                                size: 'large',
+                                prefix: <LockOutlined className={'prefixIcon'}/>,
+                            }}
+                            rules={[
+                                {
+                                    required: true,
+                                },
+                            ]}
+                        />
+
+                    </>
+                )}
+                <div
+                    style={{
+                        marginBlockEnd: 24,
+                    }}
+                >
+                    {error && (
+                        <Typography.Text type={'danger'}>{error}</Typography.Text>
+                    )}
+                </div>
+            </LoginFormPage>
+        </div>
+    );
+
+
+}
