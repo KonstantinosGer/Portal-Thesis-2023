@@ -867,15 +867,15 @@ func SendEmail() gin.HandlerFunc {
 		log.Println(serviceGmail)
 
 		//
-		//Casbin
+		// Connect to RBAC Database (for gorm queries)
 		//
-		//Connect remotely to RBAC schema (db = casbin_rule)
-		rbacDB, err := database.RBACConnect()
+		rbacDB, err := database.ConnectToRBACGorm()
 		if err != nil {
+			c.AbortWithError(http.StatusInternalServerError, err)
 			log.Println(err)
-			panic(fmt.Sprintf("failed to initialize RBAC connection: %v", err))
+			return
 		}
-		defer rbacDB.Close()
+		defer database.CloseDBConnectionGorm(rbacDB)
 
 		//
 		//Get customer's folder id (parent folder id), based on customer's file id (file that just got approved)
@@ -885,7 +885,6 @@ func SendEmail() gin.HandlerFunc {
 			log.Println(err)
 		}
 		var parentFolderId = currentFilePropertiesList.Parents[0]
-		fmt.Println(parentFolderId)
 
 		//
 		//Get customer's folder name (parent folder name), based on customer's folder id (parent folder id)
@@ -897,49 +896,59 @@ func SendEmail() gin.HandlerFunc {
 		//Customer's podio_id is equal to parent folder "Name" attribute
 		//Convert from string to int with "strconv.Atoi(s string), which returns (int, error)"
 		var customerId, _ = strconv.Atoi(parentFolderPropertiesList.Name)
-		fmt.Println(customerId)
 
 		//
 		//Get customer's email from rbac db, using the association between his podio_id (customer id), his user_id (firebase id), and his email (firebase email).
 		//
-		//Get customer's firebase id from rbac db, based on his podio_id (customer id)
-		var customerFirebaseId string
-		err = rbacDB.QueryRowx("SELECT user_id FROM customer_user WHERE customer_user.customer_id = ?;", customerId).Scan(&customerFirebaseId)
+		//Get customer's firebase ids from rbac db, based on his podio_id (customer id)
+		var customerFirebaseIds []string
+		err = rbacDB.Debug().
+			Table("customer_user").
+			Select("user_id").
+			Where("customer_user.customer_id = ?", customerId).
+			Find(&customerFirebaseIds).Error
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+			log.Println(err)
+			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
-		fmt.Println(customerFirebaseId)
+
 		//Get customer's email from rbac db, based on his firebase id
-		var customerEmail string
-		err = rbacDB.QueryRowx("SELECT email FROM users WHERE users.id = ?;", customerFirebaseId).Scan(&customerEmail)
+		var customerEmails []string
+		err = rbacDB.Debug().
+			Table("users").
+			Select("email").
+			Where("users.id IN (?)", customerFirebaseIds).
+			Find(&customerEmails).Error
 		if err != nil {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+			log.Println(err)
+			c.AbortWithError(http.StatusInternalServerError, err)
 			return
 		}
-		fmt.Println(customerEmail)
 
 		var selectedFileName = currentFilePropertiesList.Name
 
-		// Compose the message
-		messageStr := []byte(
-			"From: me\r\n" +
-				"To: " + customerEmail + "\r\n" +
-				"Subject: Digital Minds - New Report\r\n\r\n" +
-				"A new report was uploaded to your vault!\n" +
-				"Title: " + selectedFileName + "\n\n" +
-				"Visit Digital Minds Portal to securely view it.\n" +
-				"https://portal.digitalminds-dashboard.com\n\n" +
-				"This email is an automated notification, please do not reply to this message.")
+		for _, customerEmail := range customerEmails {
+			// Compose the message
+			messageStr := []byte(
+				"From: me\r\n" +
+					"To: " + customerEmail + "\r\n" +
+					"Subject: Digital Minds - New Report\r\n\r\n" +
+					"A new report was uploaded to your vault!\n" +
+					"Title: " + selectedFileName + "\n\n" +
+					"Visit Digital Minds Portal to securely view it.\n" +
+					"https://portal.digitalminds-dashboard.com\n\n" +
+					"This email is an automated notification, please do not reply to this message.")
 
-		//Send email
-		_, err = serviceGmail.Users.Messages.Send("me", &gmail.Message{
-			Raw: base64.URLEncoding.EncodeToString(messageStr),
-		}).Do()
-		if err != nil {
-			log.Printf("Error: %v", err)
-		} else {
-			fmt.Println("Message sent!")
+			//Send email
+			_, err = serviceGmail.Users.Messages.Send("me", &gmail.Message{
+				Raw: base64.URLEncoding.EncodeToString(messageStr),
+			}).Do()
+			if err != nil {
+				log.Printf("Error: %v", err)
+			} else {
+				fmt.Println("Message sent!")
+			}
 		}
 
 		c.JSON(http.StatusOK, nil)
