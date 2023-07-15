@@ -4,7 +4,8 @@ import {
     onAuthStateChanged,
     signInWithEmailAndPassword,
     signInWithPopup,
-    signOut
+    signOut,
+    sendPasswordResetEmail
 } from 'firebase/auth';
 import {auth} from '../config/firebase';
 import {User, UserCredential} from "@firebase/auth/dist/auth-public";
@@ -21,6 +22,7 @@ type UserAuthContextType = {
     signInWithGoogle: () => Promise<UserCredential>
     permissions: string[][]
     can: (action: string, object: string) => boolean
+    forgotPassword: (email: string) => Promise<void>
 }
 
 const UserAuthContext = createContext<UserAuthContextType>({
@@ -29,7 +31,8 @@ const UserAuthContext = createContext<UserAuthContextType>({
     signInEmailPassword: (email, password) => new Promise<UserCredential>(() => false),
     signInWithGoogle: () => new Promise<UserCredential>(() => false),
     permissions: [],
-    can: (action, object) => false
+    can: (action, object) => false,
+    forgotPassword: (email) => new Promise<void>(() => false),
 })
 
 export const UserAuthContextProvider = ({children}: any) => {
@@ -49,6 +52,10 @@ export const UserAuthContextProvider = ({children}: any) => {
 
     const logout = () => {
         return signOut(auth)
+    }
+
+    const forgotPassword = (email: string) => {
+        return sendPasswordResetEmail(auth, email)
     }
 
     const fetchUserPermissions = async () => {
@@ -102,7 +109,7 @@ export const UserAuthContextProvider = ({children}: any) => {
 
     return (
         <UserAuthContext.Provider
-            value={{user, logout, signInEmailPassword, signInWithGoogle, permissions, can}}>
+            value={{user, logout, signInEmailPassword, signInWithGoogle, permissions, can, forgotPassword}}>
             {children}
         </UserAuthContext.Provider>
     )

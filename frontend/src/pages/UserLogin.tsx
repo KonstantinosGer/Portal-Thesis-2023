@@ -1,11 +1,11 @@
-import {useEffect, useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {LockOutlined, UserOutlined} from '@ant-design/icons';
 import {LoginFormPage, ProFormText,} from '@ant-design/pro-components';
 import {Button, Divider, notification, Tabs, Typography} from 'antd';
 import {ReactComponent as Logo} from '../assets/dm_logo_long.svg';
 import {useLocation, useNavigate} from "react-router-dom";
 import {UserAuth} from "../context/AuthContext";
-
+import "./UserLoginStyle.css";
 
 type Props = {};
 
@@ -23,7 +23,6 @@ export function UserLogin(props: Props) {
     const [authenticating, setAuthenticating] = useState<boolean>(false);
     const [error, setError] = useState<string | undefined>(undefined);
     const navigate = useNavigate();
-    // const { state } = useLocation();
     const location = useLocation();
 
     const {signInWithGoogle, signInEmailPassword, user} = UserAuth();
@@ -77,6 +76,11 @@ export function UserLogin(props: Props) {
         setAuthenticating(false)
     };
 
+    const handleForgotPassword = async () => {
+        // Navigate to another route
+        navigate('/forgot-password');
+    };
+
     useEffect(() => {
         if (user != null) {
             // console.log(location.state)
@@ -86,22 +90,34 @@ export function UserLogin(props: Props) {
     }, [user]);
 
     return (
-        <div style={{backgroundColor: 'white', height: 'calc(100vh - 48px)', margin: 0}}>
+        // <div style={{backgroundColor: 'white', height: 'calc(100vh - 48px)', margin: 0}}>
+        <div style={{backgroundColor: '#fafafa', minHeight: "100vh"}}>
             <LoginFormPage
                 backgroundImageUrl="https://gw.alipayobjects.com/zos/rmsportal/FfdJeJRQWjEeGTpqgBKj.png"
+                // style={{backgroundSize: "100vh"}}
                 onFinish={async (formData: LoginUserCredentials) => handleEmailPasswordSignIn(formData)}
                 logo={<Logo fill='#006d75'
                             style={{width: 400, height: 200, marginTop: -70, marginLeft: -170}}/>}
-                // title="Digital Minds"
-                subTitle={<></>}
 
                 submitter={{submitButtonProps: {style: {width: '100%', backgroundColor: '#006d75'}}}}
 
                 actions={
                     // <div style={{marginTop: -42}}> TODO fix empty margin when logging out !!
                     <div>
-                        <br/>
+                        <Button
+                            type={"link"}
+                            style={{
+                                pointerEvents: authenticating ? 'none' : 'auto',
+                                color: '#8c8c8c',
+                                marginTop: "8px"
+                            }}
+                            // style={{pointerEvents: authenticating ? 'none' : 'auto'}}
+                            disabled={authenticating}
+                            onClick={handleForgotPassword}
+                        >Forgot Password?</Button>
+                        <br/><br/>
                         <Divider plain>
+                            {/*<Divider plain={false}  >*/}
                             <span style={{color: '#CCC', fontWeight: 'normal', fontSize: 14}}>Other login methods</span>
                         </Divider>
 
@@ -114,43 +130,44 @@ export function UserLogin(props: Props) {
                     </div>
                 }
             >
+                <br/>
                 <Tabs
                     centered
                     activeKey={loginType}
                     onChange={(activeKey) => setLoginType(activeKey as LoginType)}
                 >
-                    <Tabs.TabPane key={'account'} tab={'Email/Password login'}/>
-                    {/*<Tabs.TabPane key={'phone'} tab={'Phone login'} disabled />*/}
+                    <Tabs.TabPane key={'account'} tab={'Sign in with Email and Password'}/>
                 </Tabs>
-                {loginType === 'account' && (
-                    <>
-                        <ProFormText
-                            name="email"
-                            fieldProps={{
-                                size: 'large',
-                                prefix: <UserOutlined className={'prefixIcon'}/>,
-                            }}
-                            rules={[
-                                {
-                                    required: true,
-                                },
-                            ]}
-                        />
-                        <ProFormText.Password
-                            name="password"
-                            fieldProps={{
-                                size: 'large',
-                                prefix: <LockOutlined className={'prefixIcon'}/>,
-                            }}
-                            rules={[
-                                {
-                                    required: true,
-                                },
-                            ]}
-                        />
 
-                    </>
-                )}
+
+                <ProFormText
+                    name="email"
+                    placeholder={"Enter your email"}
+                    fieldProps={{
+                        size: 'large',
+                        prefix: <UserOutlined className={'prefixIcon'}/>,
+                    }}
+                    rules={[
+                        {
+                            required: true,
+                        },
+                    ]}
+                />
+
+                <ProFormText.Password
+                    name="password"
+                    placeholder={"Enter your password"}
+                    fieldProps={{
+                        size: 'large',
+                        prefix: <LockOutlined className={'prefixIcon'}/>,
+                    }}
+                    rules={[
+                        {
+                            required: true,
+                        },
+                    ]}
+                />
+
                 <div
                     style={{
                         marginBlockEnd: 24,

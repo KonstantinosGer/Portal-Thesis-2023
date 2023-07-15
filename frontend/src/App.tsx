@@ -4,6 +4,7 @@ import {Navigate, Route, Routes, useLocation} from 'react-router-dom';
 import {MyLayout} from "./components/MyLayout";
 import PrivateRoutes from "./components/PrivateRoutes";
 import {UserLogin} from "./pages/UserLogin";
+import ForgotPassword from "./pages/ForgotPassword";
 import NoFoundPage from "./pages/404";
 import Authorizer from "./api/Authorizer";
 import {GlobalStateContext} from "./context/GlobalContext";
@@ -70,6 +71,7 @@ function App() {
                     </Route>
                 </Route>
                 <Route path='/login' element={<UserLogin/>}/>
+                <Route path='/forgot-password' element={<ForgotPassword/>}/>
                 <Route path='*' element={<NoFoundPage/>}/>
             </Routes>
         </div>
