@@ -155,7 +155,7 @@ export const MyLayout = (props: Props) => {
                                     paddingBlockStart: 12,
                                 }}
                             >
-                                <div>© 2023 Digital Minds</div>
+                                <div>© 2024 Portal</div>
                             </div>
                         );
                     }}

@@ -126,7 +126,7 @@ export function UserLogin(props: Props) {
                             style={{pointerEvents: authenticating ? 'none' : 'auto'}}
                             disabled={authenticating}
                             onClick={handleGoogleSignIn}
-                        >Sign in as Digital Minds manager</Button>
+                        >Sign in as manager</Button>
                     </div>
                 }
             >
